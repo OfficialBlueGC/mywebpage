@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multiple Draggable Drawers</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+            background-color: black;
+            color: white;
+            user-select: none;
+        }
+
+        .button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+            transition: 0.3s;
+        }
+
+        .button:hover {
+            background-color: #0056b3;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #00000080;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            z-index: 999;
+        }
+
+        .drawer {
+            position: fixed;
+            left: 0;
+            right: 0;
+            background-color: #222;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-top-left-radius: 30px;
+            border-top-right-radius: 30px;
+            padding: 0;
+            box-sizing: border-box;
+            z-index: 1000;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        .drawer-handle {
+            width: 100px;
+            height: 5px;
+            background-color: #ffffff7a;
+            border-radius: 65px;
+            margin: 10px auto;
+            user-select: none;
+        }
+
+        .drawer-header {
+            position: sticky;
+            top: 0;
+            text-align: center;
+            padding: 0 10px;
+            background-color: #222;
+            z-index: 1;
+            flex-shrink: 0;
+        }
+
+        .drawer-content {
+            color: #ffffff;
+            padding: 0 20px 20px 20px;
+            overflow-y: auto;
+            flex: 1;
+            background-color: #222;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .drawer-content::-webkit-scrollbar {
+            width: 6px;
+            display: none;
+        }
+
+        .drawer-content::-webkit-scrollbar-thumb {
+            background-color: #ffffff7a;
+            border-radius: 3px;
+        }
+
+        .drcategory {
+            display: flex;
+            flex-direction: column;
+            background-color: #333333;
+            border-radius: 17px;
+            overflow: hidden;
+            flex-shrink: 0;
+            border: none;
+        }
+
+        .drcategory .btn {
+            background-color: transparent;
+            border: none;
+            text-align: left;
+            padding: 2px 20px;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid #ffffff15;
+            gap: 20px;
+            justify-content: space-between;
+            font-weight: 100;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+            min-height: 44px;
+            pointer-events: auto;
+        }
+
+        .drcategory .radiobtn {
+            position: relative;
+            background-color: transparent;
+            border: none;
+            text-align: left;
+            padding: 2px 20px;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid #ffffff15;
+            gap: 20px;
+            justify-content: space-between;
+            font-weight: 100;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+            user-select: none;
+            min-height: 44px;
+            pointer-events: auto;
+            /* Ensure radio buttons remain clickable */
+        }
+
+        .drcategory .btn.danger {
+            color: #ff0055;
+        }
+
+        .drcategory .btn.featured {
+            color: #00aa00;
+        }
+
+        .drcategory .btn.active,
+        .drcategory .radiobtn.active {
+            background-color: #444444;
+        }
+
+        .drcategory .btn:active,
+        .drcategory .radiobtn:active {
+            background-color: #444444;
+        }
+
+        .radiobtn input[type="radio"] {
+            display: none;
+        }
+
+        .radiobtn .radio-custom {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #ffffff7a;
+            border-radius: 50%;
+            background-color: transparent;
+            transition: all 0.2s ease;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .radiobtn input[type="radio"]:checked+.radio-custom {
+            background-color: #ffffff;
+            border-color: #ffffff;
+        }
+
+        .radiobtn input[type="radio"]:checked+.radio-custom::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 8px;
+            height: 8px;
+            background-color: #222;
+            border-radius: 50%;
+        }
+
+        .drcategory .btn img {
+            width: 15px;
+            height: 15px;
+            scale: 1.2;
+        }
+
+        .drcategory .btn:last-child,
+        .drcategory .radiobtn:last-child {
+            border-bottom: none;
+        }
+
+        .largetxtbox {
+            height: 120px;
+            background-color: transparent;
+            color: white;
+            font-family: inherit;
+            padding: 15px;
+            border: none;
+            user-select: text;
+            resize: none;
+            outline: none;
+            flex-shrink: 0;
+        }
+
+        .char-counter {
+            font-size: 12px;
+            color: #c9c9c9;
+            text-align: right;
+            margin-top: 5px;
+            margin: 15px;
+        }
+    </style>
+</head>
+
+<body>
+    <button class="button" data-drawer="drawer1">Open Drawer 1</button>
+    <button class="button" data-drawer="drawer2">Open Drawer 2</button>
+
+    <div class="overlay" id="overlay"></div>
+
+    <div class="drawer" id="drawer1">
+        <div class="drawer-header">
+            <div class="drawer-handle"></div>
+        </div>
+        <div class="drawer-content">
+            <div class="drcategory">
+                <div class="btn">
+                    <p>Follow</p>
+                    <img src="svg/follow.svg">
+                </div>
+                <div class="btn">
+                    <p>Message</p>
+                    <img src="svg/messages.svg">
+                </div>
+            </div>
+            <div class="drcategory">
+                <div class="btn">
+                    <p>Share</p>
+                    <img style="scale: 1.4;" src="svg/share.svg">
+                </div>
+            </div>
+            <div class="drcategory">
+                <div class="btn">
+                    <p>About this plastique</p>
+                    <img src="svg/follow.svg">
+                </div>
+                <div class="btn">
+                    <p>Memberships</p>
+                    <img src="svg/memberships.svg">
+                </div>
+                <div class="btn featured">
+                    <p>Add to Close Friends</p>
+                    <img src="svg/addclosefriend.svg">
+                </div>
+            </div>
+            <div class="drcategory">
+                <div class="btn">
+                    <p>Hide your Story</p>
+                    <img src="svg/hide.svg">
+                </div>
+                <div class="btn">
+                    <p>Restrict</p>
+                    <img src="svg/restrict.svg">
+                </div>
+            </div>
+            <div class="drcategory">
+                <div class="btn danger">
+                    <p>Block</p>
+                    <img src="svg/blockred.svg">
+                </div>
+                <div class="btn danger">
+                    <p>Report</p>
+                    <img src="svg/flagred.svg">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="drawer" id="drawer2">
+        <div class="drawer-header">
+            <div class="drawer-handle"></div>
+            <h2>Report</h2>
+        </div>
+        <div class="drawer-content">
+            <div class="drcategory">
+                <label class="radiobtn">
+                    <p>Harassment / Bullying</p>
+                    <input type="radio" name="report" value="spam">
+                    <span class="radio-custom"></span>
+                </label>
+                <label class="radiobtn">
+                    <p>Hate Speech / Discrimination</p>
+                    <input type="radio" name="report" value="inappropriate">
+                    <span class="radio-custom"></span>
+                </label>
+                <label class="radiobtn">
+                    <p>Explicit Content / Sexual Activity</p>
+                    <input type="radio" name="report" value="abusive">
+                    <span class="radio-custom"></span>
+                </label>
+                <label class="radiobtn">
+                    <p>Inappropriate / Violent Content</p>
+                    <input type="radio" name="report" value="inappropriate">
+                    <span class="radio-custom"></span>
+                </label>
+                <label class="radiobtn">
+                    <p>Impersonation / Identity Theft</p>
+                    <input type="radio" name="report" value="abusive">
+                    <span class="radio-custom"></span>
+                </label>
+                <label class="radiobtn">
+                    <p>Illegal Activities / Scams</p>
+                    <input type="radio" name="report" value="abusive">
+                    <span class="radio-custom"></span>
+                </label>
+                <label class="radiobtn">
+                    <p>Something else</p>
+                    <input type="radio" name="report" value="other">
+                    <span class="radio-custom"></span>
+                </label>
+            </div>
+            <div class="drcategory">
+                <textarea class="largetxtbox" placeholder="Write a message..." maxlength="200"
+                    onkeyup="updateCounter(this)"></textarea>
+                <div class="char-counter">0/200</div>
+            </div>
+            <div class="drcategory">
+                <div class="btn danger" style="justify-content: center;">
+                    <p>Report</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function updateCounter(textarea) {
+            const counter = textarea.nextElementSibling;
+            const currentLength = textarea.value.length;
+            counter.textContent = `${currentLength}/200`;
+        }
+        class DrawerHandler {
+            constructor() {
+                this.overlay = document.getElementById('overlay');
+                this.drawers = new Map();
+                this.activeDrawer = null;
+                this.isDragging = false;
+                this.startY = 0;
+                this.startBottom = 0;
+                this.dragInitiated = false;
+                this.touchStartTime = 0;
+                this.isButtonClick = false;
+
+                this.initializeDrawers();
+                this.setupEventListeners();
+                this.setupButtonListeners();
+                this.setupRadioListeners();
+                this.setupTextareaListeners();
+            }
+
+            initializeDrawers() {
+                document.querySelectorAll('.drawer').forEach(drawer => {
+                    const contentHeight = drawer.scrollHeight;
+                    drawer.style.bottom = `-${contentHeight}px`;
+                    this.drawers.set(drawer.id, {
+                        element: drawer,
+                        contentHeight: contentHeight,
+                        observer: new MutationObserver(() => this.updateHeight(drawer))
+                    });
+                    this.drawers.get(drawer.id).observer.observe(drawer, { childList: true, subtree: true });
+                });
+            }
+
+            setupEventListeners() {
+                document.querySelectorAll('.button[data-drawer]').forEach(button => {
+                    button.addEventListener('click', () => this.toggleDrawer(button.dataset.drawer));
+                });
+
+                this.overlay.addEventListener('click', () => this.closeActiveDrawer());
+
+                document.querySelectorAll('.drawer').forEach(drawer => {
+                    ['mousedown', 'touchstart'].forEach(event => {
+                        drawer.addEventListener(event, e => this.startDragging(e, drawer));
+                    });
+                });
+
+                ['mousemove', 'touchmove'].forEach(event => {
+                    document.addEventListener(event, e => this.drag(e));
+                });
+
+                ['mouseup', 'touchend'].forEach(event => {
+                    document.addEventListener(event, () => this.stopDragging());
+                });
+            }
+
+            setupButtonListeners() {
+                document.querySelectorAll('.drcategory .btn').forEach(btn => {
+                    btn.addEventListener('touchstart', (e) => {
+                        this.touchStartTime = Date.now();
+                        this.isButtonClick = true;
+                        btn.classList.add('active');
+                    });
+
+                    btn.addEventListener('touchend', (e) => {
+                        btn.classList.remove('active');
+                        if (Date.now() - this.touchStartTime < 300 && this.isButtonClick) {
+                            this.handleButtonClick(btn);
+                        }
+                        this.isButtonClick = false;
+                    });
+
+                    btn.addEventListener('touchmove', () => {
+                        this.isButtonClick = false;
+                    });
+
+                    btn.addEventListener('touchcancel', () => {
+                        btn.classList.remove('active');
+                        this.isButtonClick = false;
+                    });
+
+                    btn.addEventListener('mousedown', (e) => {
+                        this.touchStartTime = Date.now();
+                        this.isButtonClick = true;
+                        btn.classList.add('active');
+                    });
+
+                    btn.addEventListener('mouseup', (e) => {
+                        btn.classList.remove('active');
+                        if (Date.now() - this.touchStartTime < 300 && this.isButtonClick) {
+                            this.handleButtonClick(btn);
+                        }
+                        this.isButtonClick = false;
+                    });
+
+                    btn.addEventListener('mousemove', () => {
+                        this.isButtonClick = false;
+                    });
+
+                    btn.addEventListener('mouseleave', () => {
+                        btn.classList.remove('active');
+                        this.isButtonClick = false;
+                    });
+
+                    // Add onclick event to close the drawer
+                    btn.onclick = () => this.closeDrawerOnClick();
+                });
+            }
+
+            handleButtonClick(btn) {
+                // Add your button click logic here if needed
+                this.closeActiveDrawer();
+            }
+
+            // New function to close the current drawer
+            closeDrawerOnClick() {
+                if (this.activeDrawer) {
+                    this.closeDrawer(this.activeDrawer);
+                }
+            }
+
+            setupRadioListeners() {
+                const radioButtons = document.querySelectorAll('.radiobtn');
+
+                radioButtons.forEach(label => {
+                    const radio = label.querySelector('input[type="radio"]');
+
+                    label.addEventListener('touchstart', (e) => {
+                        this.touchStartTime = Date.now();
+                        this.isButtonClick = true;
+                        label.classList.add('active');
+                    });
+
+                    label.addEventListener('touchend', (e) => {
+                        label.classList.remove('active');
+                        if (Date.now() - this.touchStartTime < 300 && this.isButtonClick) {
+                            radio.checked = true;
+                        }
+                        this.isButtonClick = false;
+                    });
+
+                    label.addEventListener('touchmove', () => {
+                        this.isButtonClick = false;
+                    });
+
+                    label.addEventListener('touchcancel', () => {
+                        label.classList.remove('active');
+                        this.isButtonClick = false;
+                    });
+
+                    label.addEventListener('mousedown', (e) => {
+                        this.touchStartTime = Date.now();
+                        this.isButtonClick = true;
+                        label.classList.add('active');
+                    });
+
+                    label.addEventListener('mouseup', (e) => {
+                        label.classList.remove('active');
+                        if (Date.now() - this.touchStartTime < 300 && this.isButtonClick) {
+                            radio.checked = true;
+                        }
+                        this.isButtonClick = false;
+                    });
+
+                    label.addEventListener('mousemove', () => {
+                        this.isButtonClick = false;
+                    });
+
+                    label.addEventListener('mouseleave', () => {
+                        label.classList.remove('active');
+                        this.isButtonClick = false;
+                    });
+                });
+            }
+
+            setupTextareaListeners() {
+                document.querySelectorAll('.largetxtbox').forEach(textarea => {
+                    ['mousedown', 'touchstart'].forEach(event => {
+                        textarea.addEventListener(event, (e) => {
+                            e.stopPropagation();
+                        });
+                    });
+                });
+            }
+
+            toggleDrawer(drawerId) {
+                const drawerData = this.drawers.get(drawerId);
+                if (!drawerData) return;
+
+                if (this.activeDrawer && this.activeDrawer !== drawerData.element) {
+                    this.closeDrawer(this.activeDrawer);
+                }
+
+                const isOpen = drawerData.element.classList.contains('open');
+                if (isOpen) {
+                    this.closeDrawer(drawerData.element);
+                } else {
+                    this.openDrawer(drawerData.element);
+                }
+            }
+
+            openDrawer(drawer) {
+                this.activeDrawer = drawer;
+                drawer.classList.add('open');
+                drawer.style.bottom = '0px';
+                this.overlay.style.opacity = '0.5';
+                this.overlay.style.pointerEvents = 'auto';
+            }
+
+            closeDrawer(drawer) {
+                const drawerData = this.getDrawerData(drawer);
+                drawer.classList.remove('open');
+                drawer.style.bottom = `-${drawerData.contentHeight}px`;
+                this.overlay.style.opacity = '0';
+                this.overlay.style.pointerEvents = 'none';
+                this.activeDrawer = null;
+            }
+
+            closeActiveDrawer() {
+                if (this.activeDrawer && !this.isDragging) {
+                    this.closeDrawer(this.activeDrawer);
+                }
+            }
+
+            startDragging(e, drawer) {
+                this.isDragging = true;
+                this.dragInitiated = false;
+                this.activeDrawer = drawer;
+                drawer.style.transition = 'none';
+                this.overlay.style.transition = 'none';
+
+                const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+                this.startY = clientY;
+                this.startBottom = parseInt(getComputedStyle(drawer).bottom) || 0;
+                e.preventDefault();
+            }
+
+            drag(e) {
+                if (!this.isDragging || !this.activeDrawer) return;
+
+                const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+                const deltaY = this.startY - clientY;
+
+                if (!this.dragInitiated && Math.abs(deltaY) < 10) {
+                    return;
+                }
+                this.dragInitiated = true;
+
+                const drawerData = this.getDrawerData(this.activeDrawer);
+                let newBottom = this.startBottom + deltaY;
+
+                const maxBottom = 0;
+                const minBottom = -drawerData.contentHeight;
+                newBottom = Math.max(minBottom, Math.min(maxBottom, newBottom));
+                this.activeDrawer.style.bottom = `${newBottom}px`;
+
+                const opacityValue = Math.max(0, (newBottom + drawerData.contentHeight) / drawerData.contentHeight * 0.5);
+                this.overlay.style.opacity = opacityValue;
+                e.preventDefault();
+            }
+
+            stopDragging() {
+                if (!this.isDragging || !this.activeDrawer) return;
+                this.isDragging = false;
+                this.dragInitiated = false;
+                const drawerData = this.getDrawerData(this.activeDrawer);
+
+                this.activeDrawer.style.transition = 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)';
+                this.overlay.style.transition = 'opacity 0.35s ease';
+
+                const currentBottom = parseInt(getComputedStyle(this.activeDrawer).bottom);
+                const threshold = -drawerData.contentHeight * 0.5;
+
+                if (currentBottom >= threshold) {
+                    this.openDrawer(this.activeDrawer);
+                } else {
+                    this.closeDrawer(this.activeDrawer);
+                }
+            }
+
+            updateHeight(drawer) {
+                const drawerData = this.getDrawerData(drawer);
+                drawerData.contentHeight = drawer.scrollHeight;
+                if (!drawer.classList.contains('open')) {
+                    drawer.style.bottom = `-${drawerData.contentHeight}px`;
+                }
+            }
+
+            getDrawerData(drawer) {
+                return this.drawers.get(drawer.id);
+            }
+        }
+
+        window.addEventListener('load', () => new DrawerHandler());
+    </script>
+</body>
+
+</html>
